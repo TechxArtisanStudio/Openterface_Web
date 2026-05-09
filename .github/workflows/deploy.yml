@@ -18,14 +18,23 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Openterface_Web
         uses: actions/checkout@v4
+        with:
+          path: Openterface_Web
+
+      - name: Checkout Openterface_Core
+        uses: actions/checkout@v4
+        with:
+          repository: TechxArtisanStudio/Openterface_Core
+          path: Openterface_Core
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
+          cache-dependency-path: Openterface_Web/package-lock.json
 
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v14
@@ -34,17 +43,20 @@ jobs:
 
       - name: Build WASM from Openterface_Core
         run: bash wasm-build/build.sh ../Openterface_Core public
+        working-directory: Openterface_Web
 
       - name: Install dependencies
         run: npm ci
+        working-directory: Openterface_Web
 
       - name: Build
         run: npm run build
+        working-directory: Openterface_Web
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: Openterface_Web/dist
 
   deploy:
     needs: build
