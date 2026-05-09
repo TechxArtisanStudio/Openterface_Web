@@ -19,11 +19,12 @@ emcc \
   "$SRC/keymod_packets.c" \
   "$SRC/keymod_parser.c" \
   -I"$INC" \
-  -o "$OUT_DIR/keymod.wasm" \
+  -o "$OUT_DIR/keymod.js" \
   -O3 \
-  -s STANDALONE_WASM=0 \
   -s WASM=1 \
-  -s EXPORTED_RUNTIME_METHODS='[]' \
+  -s MODULARIZE=1 \
+  -s EXPORT_NAME="createKeymodModule" \
+  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","stringToNewUTF8"]' \
   -s EXPORTED_FUNCTIONS='[ \
     "_km_hid_code", \
     "_km_hid_code_for_char", \
@@ -38,8 +39,8 @@ emcc \
     "_malloc", \
     "_free" \
   ]' \
-  -s ALLOW_MEMORY_GROWTH=1 \
-  -s INITIAL_MEMORY=131072
+  --no-entry \
+  -s ALLOW_MEMORY_GROWTH=1
 
 echo "[wasm] Output: $OUT_DIR/keymod.wasm"
 ls -lh "$OUT_DIR/keymod.wasm"

@@ -19,9 +19,3 @@ declare interface WasmExports {
   _km_tokenize_script(inputPtr: number, outPtr: number, max: number): number
   _km_checksum(ptr: number, len: number): number
 }
-
-declare module 'vue' {
-  interface ComponentCustomProperties {
-    $wasm: WasmExports | null
-  }
-}
