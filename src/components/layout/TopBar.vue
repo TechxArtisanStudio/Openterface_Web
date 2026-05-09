@@ -1,20 +1,25 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, inject } from 'vue'
 import { useSerial } from '../../composables/useSerial'
 import { useViewerMedia } from '../../composables/useViewerMedia'
 import { useBrowserDetection } from '../../composables/useBrowserDetection'
 import CameraSelector from '../video/CameraSelector.vue'
 import InputToggles from '../input/InputToggles.vue'
+import type { Ref } from 'vue'
 
 const { state, connect, disconnect, isConnected } = useSerial()
 const media = useViewerMedia()
 const detection = useBrowserDetection()
+const videoElRef = inject<Ref<HTMLVideoElement | null>>('videoEl')
 
 async function toggleMonitor() {
+  console.log('[TopBar] toggleMonitor, enabled:', media.enabled.value, 'videoEl:', !!videoElRef?.value)
   if (media.enabled.value) {
     media.disconnect()
+    console.log('[TopBar] monitor disconnected')
   } else {
-    await media.connect()
+    const result = await media.connect(videoElRef?.value)
+    console.log('[TopBar] monitor connect result:', result)
   }
 }
 

@@ -1,77 +1,108 @@
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive } from 'vue'
 import { useSerial } from './useSerial'
 import { useSerialCommands } from './useSerialCommands'
 
-export function useViewerMouse(videoEl: HTMLVideoElement | null) {
+export function useViewerMouse() {
+  const videoEl = ref<HTMLVideoElement | null>(null)
   const enabled = ref(false)
-  const mouseMode = ref<'absolute' | 'relative'>('absolute')
   const mouse = reactive({ x: 0, y: 0 })
   let isPressed = false
   let currentButton = 0
-  let wheelState = 0
+  let lastX = 0
+  let lastY = 0
 
   const { isConnected } = useSerial()
-  const { sendMouseAbsolute, sendMouseRelative } = useSerialCommands()
+  const { sendMouseAbsolute: serialSendMouseAbs } = useSerialCommands()
 
   function handleClick(e: MouseEvent): void {
+    console.log('[Mouse] click, button:', e.button, 'enabled:', enabled.value)
     if (!enabled.value || !isConnected.value) return
     isPressed = true
     currentButton = mapButton(e.button)
-    sendMouseEvent(currentButton)
+    updatePosition(e)
+    const { absX, absY } = getAbsoluteCoords()
+    serialSendMouseAbs(currentButton, absX, absY, 0)
   }
 
-  function handleMouseUp(): void {
+  function handleMouseUp(e: MouseEvent): void {
     isPressed = false
+    const btn = currentButton
     currentButton = 0
-    sendMouseEvent(0)
+    console.log('[Mouse] up, button:', btn, 'enabled:', enabled.value)
+    if (!enabled.value || !isConnected.value) return
+    updatePosition(e)
+    const { absX, absY } = getAbsoluteCoords()
+    serialSendMouseAbs(0, absX, absY, 0)
   }
 
   function handleMouseMove(e: MouseEvent): void {
-    if (!enabled.value || !isConnected.value || !videoEl) return
-
-    const rect = videoEl.getBoundingClientRect()
-    mouse.x = e.clientX - rect.left
-    mouse.y = e.clientY - rect.top
-
-    if (mouseMode.value === 'absolute') {
-      sendMouseEvent(isPressed ? currentButton : 0)
-    } else {
-      // Relative mode uses movementX/Y
-      handleRelativeMove(e.movementX, e.movementY, isPressed ? currentButton : 0)
+    updatePosition(e)
+    if (!enabled.value || !isConnected.value) {
+      return
     }
+
+    const { absX, absY } = getAbsoluteCoords()
+    serialSendMouseAbs(isPressed ? currentButton : 0, absX, absY, 0)
   }
 
-  function handleRelativeMove(dx: number, dy: number, buttons: number): void {
-    if (!isConnected.value) return
-    // Clamp to int8 range
-    dx = Math.max(-127, Math.min(127, dx))
-    dy = Math.max(-127, Math.min(127, dy))
-    sendMouseRelative(buttons, dx, dy, 0)
-  }
-
-  function handleWheel(e: WheelEvent): void {
+  function handleWheel(e: MouseEvent): void {
     if (!enabled.value || !isConnected.value) return
+    e.preventDefault()
+    e.stopPropagation()
     const delta = e.deltaY > 0 ? 0xff : 0x01
-    if (mouseMode.value === 'absolute') {
-      sendMouseEvent(0, delta)
-    } else {
-      sendMouseRelative(0, 0, 0, delta)
-    }
+    console.log('[Mouse] wheel, delta:', delta)
+    serialSendMouseAbs(0, 0, 0, delta)
   }
 
-  function sendMouseEvent(buttons: number, wheel: number = 0): void {
-    if (!isConnected.value || !videoEl) return
+  function updatePosition(e: MouseEvent): void {
+    lastX = e.clientX
+    lastY = e.clientY
+  }
 
-    const rect = videoEl.getBoundingClientRect()
-    const relX = (mouse.x / rect.width) * 4096
-    const relY = (mouse.y / rect.height) * 4096
+  function getAbsoluteCoords(): { absX: number; absY: number } {
+    if (!videoEl.value) return { absX: 0, absY: 0 }
+    const rect = videoEl.value.getBoundingClientRect()
+    const nativeW = videoEl.value.videoWidth
+    const nativeH = videoEl.value.videoHeight
 
-    sendMouseAbsolute(buttons, Math.round(relX), Math.round(relY), wheel)
+    if (!nativeW || !nativeH) return { absX: 0, absY: 0 }
+
+    // Compute the actual displayed video size (object-contain preserves aspect ratio)
+    const nativeAspect = nativeW / nativeH
+    const containerAspect = rect.width / rect.height
+
+    let renderW: number
+    let renderH: number
+
+    if (containerAspect > nativeAspect) {
+      // Letterboxed: height fills, width is limited
+      renderH = rect.height
+      renderW = renderH * nativeAspect
+    } else {
+      // Pillarboxed: width fills, height is limited
+      renderW = rect.width
+      renderH = renderW / nativeAspect
+    }
+
+    // Compute the offset where the video frame starts within the container
+    const offsetX = (rect.width - renderW) / 2
+    const offsetY = (rect.height - renderH) / 2
+
+    // Mouse position relative to the rendered video frame
+    const relX = Math.max(0, Math.min(1, (lastX - rect.left - offsetX) / renderW))
+    const relY = Math.max(0, Math.min(1, (lastY - rect.top - offsetY) / renderH))
+
+    return {
+      absX: Math.round(relX * 4095),
+      absY: Math.round(relY * 4095),
+    }
   }
 
   function requestPointerLock(): void {
-    if (videoEl) {
-      videoEl.requestPointerLock()
+    const target = videoEl.value
+    if (target) {
+      console.log('[Mouse] requesting pointer lock')
+      target.requestPointerLock()
     }
   }
 
@@ -81,8 +112,8 @@ export function useViewerMouse(videoEl: HTMLVideoElement | null) {
 
   return {
     enabled,
-    mouseMode,
     mouse,
+    videoEl,
     handleClick,
     handleMouseUp,
     handleMouseMove,

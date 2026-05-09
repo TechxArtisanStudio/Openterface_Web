@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, inject, onMounted, onUnmounted, Ref } from 'vue'
 import { useViewerMedia } from '../../composables/useViewerMedia'
 import VideoControls from './VideoControls.vue'
 
@@ -8,17 +8,33 @@ const showControls = ref(true)
 const isFullscreen = ref(false)
 let controlsTimeout: ReturnType<typeof setTimeout> | null = null
 
+// Share video element with parent
+const videoElRef = inject<Ref<HTMLVideoElement | null>>('videoEl')
+
+const emit = defineEmits<{
+  'mousedown': [e: MouseEvent]
+  'mouseup': [e: MouseEvent]
+  'mousemove': [e: MouseEvent]
+  'wheel': [e: WheelEvent]
+}>()
+
 const media = useViewerMedia()
 
-// Expose the video element to parent
 defineExpose({ videoRef })
 
-function handleMouseMove(): void {
+onMounted(() => {
+  if (videoElRef) {
+    videoElRef.value = videoRef.value
+  }
+})
+
+function onShowControlsMove(e: MouseEvent): void {
   showControls.value = true
   if (controlsTimeout) clearTimeout(controlsTimeout)
   controlsTimeout = setTimeout(() => {
     showControls.value = false
   }, 3000)
+  emit('mousemove', e)
 }
 
 function toggleFullscreen(): void {
@@ -39,19 +55,25 @@ onUnmounted(() => {
 <template>
   <div
     class="relative w-full h-full bg-black flex items-center justify-center"
-    @mousemove="handleMouseMove"
-    @mouseleave="showControls = false"
+    @contextmenu.prevent
+    @mousedown="$emit('mousedown', $event)"
+    @mouseup="$emit('mouseup', $event)"
+    @mousemove="onShowControlsMove"
+    @wheel="$emit('wheel', $event)"
   >
     <!-- Video Element -->
     <video
       ref="videoRef"
       class="w-full h-full object-contain"
       autoplay
+      muted
       playsinline
+      @play="console.log('[VideoStream] video playing, videoWidth:', videoRef?.videoWidth, 'videoHeight:', videoRef?.videoHeight, 'enabled:', media.enabled.value)"
+      @error="console.log('[VideoStream] video error:', $event)"
     />
 
     <!-- Welcome Poster (shown when no stream) -->
-    <div v-if="!media.enabled.value" class="absolute inset-0 flex items-center justify-center bg-slate-950">
+    <div v-if="!media.enabled.value" class="absolute inset-0 flex items-center justify-center bg-slate-950 pointer-events-none">
       <div class="text-center">
         <svg class="w-20 h-20 mx-auto text-slate-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />

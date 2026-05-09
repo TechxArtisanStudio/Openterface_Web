@@ -1,20 +1,30 @@
-import { ref, onMounted, onUnmounted, watch, reactive } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useSerial } from './useSerial'
-import { getKeymod } from './useWasm'
+import { getKeymod, isWasmReady } from './useWasm'
 import { useSerialCommands } from './useSerialCommands'
 
 export function useViewerKeyboard() {
   const enabled = ref(false)
-  const km = () => getKeymod()
   const { isConnected } = useSerial()
-  const { sendKeyDown, sendKeyUp } = useSerialCommands()
+  const { sendKeyPress, sendKeyDown, sendKeyUp } = useSerialCommands()
 
   // Currently pressed keys (by event.code)
   const pressedKeys = new Map<string, number>() // code → hidCode
-  let currentModifiers = 0
+
+  const keyDownHandler = (e: KeyboardEvent) => handleEvent(e, true)
+  const keyUpHandler = (e: KeyboardEvent) => handleEvent(e, false)
+
+  function handleKeyDown(event: KeyboardEvent): void {
+    handleEvent(event, true)
+  }
+
+  function handleKeyUp(event: KeyboardEvent): void {
+    handleEvent(event, false)
+  }
 
   function handleEvent(event: KeyboardEvent, pressed: boolean): void {
-    if (!enabled.value || !isConnected.value) return
+    console.log('[Keyboard] event:', event.type, 'code:', event.code, 'enabled:', enabled.value, 'isConnected:', isConnected.value)
+    if (!enabled.value || !isConnected.value || !isWasmReady()) return
 
     // Don't capture system shortcuts we can't prevent
     if (event.altKey && event.ctrlKey) return
@@ -23,26 +33,32 @@ export function useViewerKeyboard() {
     event.stopPropagation()
 
     const code = event.code
-    const hidCode = mapCodeToHid(code, km())
-    if (hidCode < 0) return
-
-    // Compute modifier state from the event
-    const modifiers = computeModifiers(event)
+    const km = getKeymod()
+    const hidCode = mapCodeToHid(code, km)
+    if (hidCode < 0) {
+      console.warn('[Keyboard] unmapped code:', code)
+      return
+    }
 
     if (pressed) {
       pressedKeys.set(code, hidCode)
-      currentModifiers = modifiers
-      sendKeyDown(modifiers, hidCode)
+      const modifiers = computeModifiers(event)
+      // Only non-modifier keys go in key slots; modifiers are in the modifier byte
+      const keys = Array.from(pressedKeys.values()).filter(k => k < 0xe0).slice(0, 6)
+      console.log('[Keyboard] sending keyDown, modifiers:', modifiers.toString(16), 'keys:', keys.map(k => k.toString(16)))
+      sendKeyDown(modifiers, keys)
     } else {
       pressedKeys.delete(code)
-
       if (pressedKeys.size === 0) {
-        // All keys released, send release report
+        // All keys released, send empty report
+        console.log('[Keyboard] sending keyUp')
         sendKeyUp()
-        currentModifiers = 0
       } else {
-        // Other keys still held, send updated report
-        sendKeyDown(modifiers, hidCode)
+        // Send remaining held keys
+        const modifiers = computeModifiers(event)
+        const keys = Array.from(pressedKeys.values()).filter(k => k < 0xe0).slice(0, 6)
+        console.log('[Keyboard] sending keyDown (still held), modifiers:', modifiers.toString(16), 'keys:', keys.map(k => k.toString(16)))
+        sendKeyDown(modifiers, keys)
       }
     }
   }
@@ -51,10 +67,16 @@ export function useViewerKeyboard() {
     if (!isConnected.value) return
     sendKeyUp()
     pressedKeys.clear()
-    currentModifiers = 0
   }
 
+  onMounted(() => {
+    document.addEventListener('keydown', keyDownHandler)
+    document.addEventListener('keyup', keyUpHandler)
+  })
+
   onUnmounted(() => {
+    document.removeEventListener('keydown', keyDownHandler)
+    document.removeEventListener('keyup', keyUpHandler)
     releaseAll()
   })
 
@@ -62,7 +84,6 @@ export function useViewerKeyboard() {
 }
 
 function mapCodeToHid(code: string, km: ReturnType<typeof getKeymod>): number {
-  // Direct HID mapping from common codes
   const direct: Record<string, number> = {
     KeyA: 0x04,
     KeyB: 0x05,
@@ -176,9 +197,9 @@ function mapCodeToHid(code: string, km: ReturnType<typeof getKeymod>): number {
 
 function computeModifiers(event: KeyboardEvent): number {
   let mod = 0
-  if (event.ctrlKey || event.code === 'ControlLeft' || event.code === 'ControlRight') mod |= 0x01
-  if (event.shiftKey || event.code === 'ShiftLeft' || event.code === 'ShiftRight') mod |= 0x02
-  if (event.altKey || event.code === 'AltLeft' || event.code === 'AltRight') mod |= 0x04
-  if (event.metaKey || event.code === 'MetaLeft' || event.code === 'MetaRight') mod |= 0x08
+  if (event.ctrlKey) mod |= 0x01
+  if (event.shiftKey) mod |= 0x02
+  if (event.altKey) mod |= 0x04
+  if (event.metaKey) mod |= 0x08
   return mod
 }

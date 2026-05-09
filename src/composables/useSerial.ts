@@ -4,6 +4,7 @@ import { ref, computed } from 'vue'
 import { SerialState, type DeviceInfo } from '../types/serial'
 import { USB, FrameParser, Command, hexDump } from '../utils/serial'
 
+// Module-level shared state so all callers see the same values
 export const serialPort = ref<SerialPort | null>(null)
 let writer: WritableStreamDefaultWriter | null = null
 let readLoopRunning = false
@@ -59,6 +60,9 @@ export function useSerial() {
       await serialPort.value.open({ baudRate: baudrate })
       log(`Connected at ${baudrate} baud`)
 
+      // Create writer for writing to the serial port
+      writer = serialPort.value.writable.getWriter()
+
       state.value = SerialState.Connected
       startReadLoop()
 
@@ -102,8 +106,8 @@ export function useSerial() {
   }
 
   async function write(data: Uint8Array): Promise<void> {
-    if (!writer || !isConnected.value) {
-      log('Cannot write: not connected')
+    if (!writer || state.value !== SerialState.Connected) {
+      log(`Cannot write: state=${state.value}, writer=${!!writer}`)
       return
     }
     try {
@@ -115,7 +119,7 @@ export function useSerial() {
   }
 
   async function writeQuery(cmd: number): Promise<void> {
-    if (!writer || !isConnected.value) return
+    if (state.value !== SerialState.Connected) return
     const frame = new Uint8Array(6)
     frame[0] = 0x57
     frame[1] = 0xab

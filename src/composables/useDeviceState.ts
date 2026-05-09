@@ -1,13 +1,16 @@
 import { ref, computed } from 'vue'
+import { useSerial } from './useSerial'
 
 export const usbMode = ref<'host' | 'target'>('target')
 
 export function useDeviceState() {
-  const firmwareVersion = ref('')
-  const targetConnected = ref(false)
-  const numLock = ref(false)
-  const capsLock = ref(false)
-  const scrollLock = ref(false)
+  const { deviceInfo } = useSerial()
+
+  const firmwareVersion = computed(() => deviceInfo.value?.firmwareVersion ?? '')
+  const targetConnected = computed(() => deviceInfo.value?.targetConnected ?? false)
+  const numLock = computed(() => deviceInfo.value?.numLock ?? false)
+  const capsLock = computed(() => deviceInfo.value?.capsLock ?? false)
+  const scrollLock = computed(() => deviceInfo.value?.scrollLock ?? false)
 
   const deviceSummary = computed(() => {
     const parts: string[] = []

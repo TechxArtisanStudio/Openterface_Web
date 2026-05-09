@@ -24,10 +24,10 @@ emcc \
   -s WASM=1 \
   -s MODULARIZE=1 \
   -s EXPORT_NAME="createKeymodModule" \
-  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","stringToNewUTF8"]' \
-  -s EXPORTED_FUNCTIONS='["_km_hid_code","_km_hid_code_for_char","_km_hid_code_label","_km_build_keyboard","_km_build_mouse_rel","_km_build_press_release","_km_parse_token","_km_parse_macro","_km_tokenize_script","_km_checksum","_malloc","_free"]' \
+  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","stringToNewUTF8","HEAPU8","HEAP32"]' \
+  -s EXPORTED_FUNCTIONS='["_km_hid_code","_km_hid_code_for_char","_km_hid_code_label","_km_build_keyboard","_km_build_mouse_rel","_km_build_mouse_abs","_km_build_press_release","_km_parse_token","_km_parse_macro","_km_tokenize_script","_km_checksum","_malloc","_free"]' \
   --no-entry \
   -s ALLOW_MEMORY_GROWTH=1
 
-echo "[wasm] Output: $OUT_DIR/keymod.js + $OUT_DIR/keymod.wasm"
-ls -lh "$OUT_DIR/keymod.js" "$OUT_DIR/keymod.wasm"
+echo "[wasm] Output: $OUT_DIR/keymod.wasm"
+ls -lh "$OUT_DIR/keymod.wasm"

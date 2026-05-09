@@ -3,58 +3,63 @@
  * Wraps the serial `write` function with typed helpers for each device operation.
  */
 import { useSerial } from './useSerial'
-import { getKeymod } from './useWasm'
+import { getKeymod, isWasmReady } from './useWasm'
 
 const FRAME_HEAD = new Uint8Array([0x57, 0xab, 0x00])
 
 export function useSerialCommands() {
   const { write } = useSerial()
-  const km = () => getKeymod()
+  const km = () => {
+    if (!isWasmReady()) {
+      console.warn('[SerialCommands] WASM not ready, skipping command')
+      return null
+    }
+    return getKeymod()
+  }
 
   /** Send a keyboard press+release (single key) */
   async function sendKeyPress(modifiers: number, hidCode: number): Promise<void> {
-    const packet = km().buildPressRelease(modifiers, hidCode)
+    const k = km()
+    if (!k) return
+    const packet = k.buildPressRelease(modifiers, hidCode)
     await write(packet)
   }
 
-  /** Send a keyboard press (key held down) */
-  async function sendKeyDown(modifiers: number, hidCode: number): Promise<void> {
-    const packet = km().buildKeyboard(modifiers, [hidCode])
+  /** Send a keyboard press (keys held down) */
+  async function sendKeyDown(modifiers: number, keys: number[]): Promise<void> {
+    const k = km()
+    if (!k) return
+    const packet = k.buildKeyboard(modifiers, keys)
     await write(packet)
   }
 
   /** Send a keyboard release (all keys up) */
   async function sendKeyUp(): Promise<void> {
-    const packet = km().buildKeyboard(0, [])
+    const k = km()
+    if (!k) return
+    const packet = k.buildKeyboard(0, [])
     await write(packet)
   }
 
-  /** Send a keyboard press + release in one go (non-WASM fallback) */
+  /** Send a keyboard press + release in one go */
   async function sendKeyTap(modifiers: number, hidCode: number): Promise<void> {
-    await sendKeyDown(modifiers, hidCode)
+    await sendKeyDown(modifiers, [hidCode])
     await sendKeyUp()
   }
 
-  /** Send an absolute mouse report */
+  /** Send an absolute mouse report (uses WASM) */
   async function sendMouseAbsolute(
     buttons: number,
     x: number,
     y: number,
     wheel: number,
   ): Promise<void> {
-    // Frame: 57 AB 00 04 07 [btn x_lo x_hi y_lo y_hi wheel] checksum
+    const k = km()
+    if (!k) return
     const clampedX = Math.max(0, Math.min(4095, x))
     const clampedY = Math.max(0, Math.min(4095, y))
-    const data = new Uint8Array([
-      buttons,
-      clampedX & 0xff,
-      (clampedX >> 8) & 0xff,
-      clampedY & 0xff,
-      (clampedY >> 8) & 0xff,
-      wheel & 0xff,
-    ])
-    const frame = buildFrame(0x04, data)
-    await write(frame)
+    const packet = k.buildMouseAbs(buttons, clampedX, clampedY, wheel)
+    await write(packet)
   }
 
   /** Send a relative mouse report (uses WASM) */
@@ -64,7 +69,9 @@ export function useSerialCommands() {
     dy: number,
     wheel: number,
   ): Promise<void> {
-    const packet = km().buildMouseRel(buttons, dx, dy, wheel)
+    const k = km()
+    if (!k) return
+    const packet = k.buildMouseRel(buttons, dx, dy, wheel)
     await write(packet)
   }
 
@@ -143,7 +150,7 @@ export function useSerialCommands() {
 }
 
 function buildFrame(cmd: number, data: Uint8Array): Uint8Array {
-  const frame = new Uint8Array(5 + data.length)
+  const frame = new Uint8Array(5 + data.length + 1) // +1 for checksum
   frame[0] = 0x57
   frame[1] = 0xab
   frame[2] = 0x00
