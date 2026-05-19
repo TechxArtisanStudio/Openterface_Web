@@ -29,6 +29,8 @@ interface EmscriptenModule {
   ccall(ident: string, returnType: string | null, argTypes: string[], args: any[]): any
   _malloc(size: number): number
   _free(ptr: number): void
+  HEAPU8: Uint8Array
+  HEAP32: Int32Array
 }
 
 type CreateModule = () => Promise<EmscriptenModule>

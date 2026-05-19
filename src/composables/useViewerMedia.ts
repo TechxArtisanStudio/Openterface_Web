@@ -54,7 +54,7 @@ export function useViewerMedia() {
     if (!targetId && hasValidDevices) {
       targetId = filteredDevices.value[0]?.deviceId || devices.value[0]?.deviceId
     }
-    selectedDevice.value = targetId
+    selectedDevice.value = targetId ?? ''
     console.log('[ViewerMedia] hasValidDevices:', hasValidDevices, 'targetId:', targetId?.slice(0, 8))
     if (!targetId && !hasValidDevices) {
       console.log('[ViewerMedia] no valid deviceId — will request any available camera (pre-permission)')

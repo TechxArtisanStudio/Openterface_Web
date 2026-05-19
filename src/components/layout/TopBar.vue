@@ -6,7 +6,7 @@ import { useBrowserDetection } from '../../composables/useBrowserDetection'
 import CameraSelector from '../video/CameraSelector.vue'
 import type { Ref } from 'vue'
 
-const { state, connect, disconnect, isConnected } = useSerial()
+const { state, connect, disconnect, isConnected, generation, usbProductId, usbModeBackend, requestUsbModeHidPermission } = useSerial()
 const media = useViewerMedia()
 const detection = useBrowserDetection()
 const videoElRef = inject<Ref<HTMLVideoElement | null>>('videoEl')
@@ -26,7 +26,7 @@ async function toggleSerial() {
   if (isConnected.value) {
     await disconnect()
   } else {
-    await connect()
+    await connect({ allowHidPrompt: true })
   }
 }
 
@@ -39,6 +39,10 @@ const stateLabel = computed(() => {
     default:
       return 'Serial Disconnected'
   }
+})
+
+const showHidUsbModePrompt = computed(() => {
+  return isConnected.value && (generation.value === 'gen1' || generation.value === 'gen3') && usbModeBackend.value !== 'hid'
 })
 </script>
 
@@ -80,6 +84,20 @@ const stateLabel = computed(() => {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
       </svg>
       {{ stateLabel }}
+    </button>
+
+    <button
+      v-if="showHidUsbModePrompt"
+      @click="requestUsbModeHidPermission"
+      :disabled="!detection.hid"
+      class="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      :class="detection.hid ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-400'"
+      :title="detection.hid ? 'Grant WebHID access for USB mode sync' : 'Current browser does not support WebHID'"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-3-3v6m9 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      {{ detection.hid ? 'Grant HID Access' : 'WebHID Unavailable' }}
     </button>
 
     <!-- Spacer -->

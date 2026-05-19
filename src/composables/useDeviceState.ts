@@ -1,10 +1,8 @@
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useSerial } from './useSerial'
 
-export const usbMode = ref<'host' | 'target'>('target')
-
 export function useDeviceState() {
-  const { deviceInfo } = useSerial()
+  const { deviceInfo, usbMode } = useSerial()
 
   const firmwareVersion = computed(() => deviceInfo.value?.firmwareVersion ?? '')
   const targetConnected = computed(() => deviceInfo.value?.targetConnected ?? false)
@@ -15,7 +13,7 @@ export function useDeviceState() {
   const deviceSummary = computed(() => {
     const parts: string[] = []
     if (firmwareVersion.value) parts.push(`FW: v${firmwareVersion.value}`)
-    parts.push(`USB: ${targetConnected.value ? 'target' : 'host'}`)
+    parts.push(`USB: ${usbMode.value}`)
     return parts.join(' | ')
   })
 

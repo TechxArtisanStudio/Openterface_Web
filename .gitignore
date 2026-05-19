@@ -1,3 +1,8 @@
 node_modules/
 dist/
 *.local
+Openterface_Core/build/
+
+# HTTPS dev certs
+server.crt
+server.key

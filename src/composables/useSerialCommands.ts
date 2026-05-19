@@ -26,10 +26,11 @@ export function useSerialCommands() {
   }
 
   /** Send a keyboard press (keys held down) */
-  async function sendKeyDown(modifiers: number, keys: number[]): Promise<void> {
+  async function sendKeyDown(modifiers: number, keys: number | number[]): Promise<void> {
     const k = km()
     if (!k) return
-    const packet = k.buildKeyboard(modifiers, keys)
+    const normalizedKeys = Array.isArray(keys) ? keys : [keys]
+    const packet = k.buildKeyboard(modifiers, normalizedKeys)
     await write(packet)
   }
 
@@ -90,14 +91,14 @@ export function useSerialCommands() {
 
   /** Switch USB to target mode */
   async function switchUsbToTarget(): Promise<void> {
-    const data = new Uint8Array([0x01, 0x00, 0x00, 0x00, 0x00])
+    const data = new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x01])
     const frame = buildFrame(0x17, data)
     await write(frame)
   }
 
   /** Check current USB switch status */
   async function checkUsbStatus(): Promise<void> {
-    const data = new Uint8Array([0x03, 0x00, 0x00, 0x00, 0x00])
+    const data = new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x03])
     const frame = buildFrame(0x17, data)
     await write(frame)
   }

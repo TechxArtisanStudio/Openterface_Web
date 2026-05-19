@@ -43,20 +43,62 @@ export const enum ResponseCommand {
   RESP_SEND_MS_REL_DATA = 0x85,
 }
 
-/** USB device identifiers */
+/** Openterface hardware generations — aligned with Qt project DeviceConstants */
+export const GENERATIONS = {
+  GEN1: {
+    label: 'Gen1',
+    serialVid: 0x1a86,
+    serialPid: 0x7523,
+    captureVid: 0x534d,
+    capturePid: 0x2109,
+    hidChip: 'MS2109' as const,
+    baudrate: 115200,
+    usbModeBackend: 'hid' as const,
+  },
+  GEN2: {
+    label: 'Gen2',
+    serialVid: 0x1a86,
+    serialPid: 0xfe0c,
+    captureVid: 0x345f,
+    capturePid: 0x2132,
+    hidChip: 'MS2130S' as const,
+    baudrate: 9600,
+    usbModeBackend: 'serial' as const,
+  },
+  GEN3: {
+    label: 'Gen3',
+    serialVid: 0x1a86,
+    serialPid: 0xfe0c,
+    captureVid: 0x345f,
+    capturePid: 0x2109,
+    hidChip: 'MS2109S' as const,
+    baudrate: 9600,
+    usbModeBackend: 'hid' as const,
+  },
+} as const
+
+/** USB device identifiers (legacy aliases for backward compatibility) */
 export const USB = {
-  /** Vendor ID for Openterface */
+  /** Vendor ID for Openterface serial chips (WCH CH340/CH9329) */
   VID: 0x1a86,
-  /** MiniKVM (CH9329) product ID */
+  /** Gen1 serial product ID */
+  GEN1_SERIAL_PID: 0x7523,
+  /** Gen2/Gen3 serial product ID */
+  GEN23_SERIAL_PID: 0xfe0c,
+  /** Gen1 baudrate */
+  GEN1_BAUDRATE: 115200,
+  /** Gen2/Gen3 baudrate */
+  GEN23_BAUDRATE: 9600,
+  /** @deprecated use GENERATIONS.GEN1.serialPid */
   MINIKVM_PID: 0x7523,
-  /** KVMGo (CH32V208) product ID */
+  /** @deprecated use GENERATIONS.GEN2.serialPid */
   KVMGO_PID: 0xfe0c,
-  /** Factory/default baudrate */
-  FACTORY_BAUDRATE: 9600,
-  /** MiniKVM baudrate */
+  /** @deprecated use GENERATIONS.GEN1.baudrate */
   MINIKVM_BAUDRATE: 115200,
-  /** KVMGo baudrate */
+  /** @deprecated use GENERATIONS.GEN2.baudrate */
   KVMGO_BAUDRATE: 9600,
+  /** @deprecated use GENERATIONS.GEN2.baudrate */
+  FACTORY_BAUDRATE: 9600,
 } as const
 
 /**
@@ -81,7 +123,7 @@ export function hexDump(data: Uint8Array): string {
  * Build a frame with header, address, command, data and checksum.
  */
 export function buildFrame(cmd: number, data: Uint8Array): Uint8Array {
-  const frame = new Uint8Array(5 + data.length)
+  const frame = new Uint8Array(5 + data.length + 1)
   frame[0] = FRAME_HEAD_0
   frame[1] = FRAME_HEAD_1
   frame[2] = DEFAULT_ADDR

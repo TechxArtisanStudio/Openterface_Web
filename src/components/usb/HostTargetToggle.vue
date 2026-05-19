@@ -1,24 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useSerial } from '../../composables/useSerial'
-import { useSerialCommands } from '../../composables/useSerialCommands'
 import { useDeviceState } from '../../composables/useDeviceState'
 
-const { isConnected } = useSerial()
-const { switchUsbToHost, switchUsbToTarget } = useSerialCommands()
+const { isConnected, setUsbMode } = useSerial()
 const { usbMode } = useDeviceState()
 
 const isHost = computed(() => usbMode.value === 'host')
+const isTarget = computed(() => usbMode.value === 'target')
 
 async function setMode(mode: 'host' | 'target'): Promise<void> {
   if (!isConnected.value) return
-  if (mode === 'host') {
-    await switchUsbToHost()
-    usbMode.value = 'host'
-  } else {
-    await switchUsbToTarget()
-    usbMode.value = 'target'
-  }
+  await setUsbMode(mode)
 }
 </script>
 
@@ -42,7 +35,7 @@ async function setMode(mode: 'host' | 'target'): Promise<void> {
       @click="setMode('target')"
       :disabled="!isConnected"
       class="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all"
-      :class="!isHost
+      :class="isTarget
         ? 'bg-emerald-500 text-white shadow'
         : 'text-slate-500 hover:text-slate-300'"
       title="Switch USB to Target"

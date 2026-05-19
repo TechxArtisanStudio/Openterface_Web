@@ -50,7 +50,7 @@ export function useViewerMouse() {
     serialSendMouseAbs(isPressed ? currentButton : 0, absX, absY, 0)
   }
 
-  function handleWheel(e: MouseEvent): void {
+  function handleWheel(e: WheelEvent): void {
     if (!enabled.value || !isConnected.value) return
     e.preventDefault()
     e.stopPropagation()

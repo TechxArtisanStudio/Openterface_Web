@@ -86,12 +86,12 @@ onMounted(async () => {
     const ports = await navigator.serial.getPorts()
     if (ports.length > 0) {
       console.log('[Layout] auto-connecting serial, existing port found')
-      connect()
+      connect({ allowHidPrompt: false })
     } else {
       // requestPort() requires a user gesture — defer to first interaction
       console.log('[Layout] no existing serial port, will auto-connect on first user interaction')
       const handler = () => {
-        connect()
+        connect({ allowHidPrompt: true })
         document.removeEventListener('click', handler)
         document.removeEventListener('keydown', handler)
         document.removeEventListener('touchstart', handler)

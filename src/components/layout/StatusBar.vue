@@ -4,7 +4,7 @@ interface Props {
   numLock: boolean
   capsLock: boolean
   scrollLock: boolean
-  usbMode: 'host' | 'target'
+  usbMode: 'host' | 'target' | 'unknown'
 }
 
 defineProps<Props>()
@@ -21,8 +21,16 @@ defineProps<Props>()
       </span>
       <div class="w-4 h-px bg-slate-700" />
       <span class="flex items-center gap-1">
-        <span class="font-semibold px-1.5 rounded" :class="usbMode === 'target' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'" :title="usbMode === 'target' ? 'USB → Target' : 'USB → Host'">
-          {{ usbMode === 'target' ? 'T' : 'H' }}
+        <span
+          class="font-semibold px-1.5 rounded"
+          :class="usbMode === 'target'
+            ? 'bg-emerald-500/20 text-emerald-400'
+            : usbMode === 'host'
+              ? 'bg-blue-500/20 text-blue-400'
+              : 'bg-slate-800 text-slate-500'"
+          :title="usbMode === 'target' ? 'USB → Target' : usbMode === 'host' ? 'USB → Host' : 'USB mode unknown'"
+        >
+          {{ usbMode === 'target' ? 'T' : usbMode === 'host' ? 'H' : '?' }}
         </span>
       </span>
     </div>

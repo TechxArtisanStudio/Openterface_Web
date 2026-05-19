@@ -2,6 +2,7 @@ export function useBrowserDetection() {
   if (typeof window === 'undefined') {
     return {
       serial: false,
+      hid: false,
       mediaDevices: false,
       pointerLock: false,
       clipboard: false,
@@ -11,6 +12,7 @@ export function useBrowserDetection() {
   }
 
   const serial = 'serial' in navigator
+  const hid = 'hid' in navigator
   const mediaDevices = 'mediaDevices' in navigator
   const pointerLock = 'pointerLockElement' in document
   const clipboard = 'clipboard' in navigator
@@ -18,6 +20,7 @@ export function useBrowserDetection() {
 
   const missingApis: string[] = []
   if (!serial) missingApis.push('WebSerial')
+  if (!hid) missingApis.push('WebHID')
   if (!mediaDevices) missingApis.push('MediaDevices')
   if (!pointerLock) missingApis.push('Pointer Lock')
   if (!clipboard) missingApis.push('Clipboard API')
@@ -27,6 +30,7 @@ export function useBrowserDetection() {
 
   return {
     serial,
+    hid,
     mediaDevices,
     pointerLock,
     clipboard,
