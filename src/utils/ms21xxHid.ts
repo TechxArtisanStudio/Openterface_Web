@@ -6,6 +6,8 @@ export interface Ms21xxUsbModeDetails {
   chipKind: Ms21xxKind
   gpio0Value: number | null
   spdifoutValue: number
+  gpio0Addr: number
+  spdifoutAddr: number
   firmwareVersionCode: number | null
   enabledBit: number
   clearMask: number
@@ -48,6 +50,10 @@ const REPORT_SHORT_SIZE = 9
 const REPORT_EXT_SIZE = 11
 const REPORT_LARGE_SIZE = 65
 const LEGACY_FIRMWARE_THRESHOLD = 24081309
+
+function log(msg: string): void {
+  console.log(`[MS21xxHID] ${msg}`)
+}
 
 const FILTERS = [
   { vendorId: 0x534d, productId: 0x2109 },
@@ -147,22 +153,31 @@ export async function readMs21xxUsbModeDetails(device: Ms21xxWebHidDevice): Prom
   const bits = await getUsbModeBits(device, kind)
   const gpio0Value = registers.gpio0 !== 0 ? await readRegister(device, kind, registers.gpio0) : null
   const spdifoutValue = await readRegister(device, kind, registers.spdifout)
-  const primaryTarget = (spdifoutValue & bits.enabledBit) !== 0
+
+  // SPDIFOUT is the read-write register that controls USB mode
+  // GPIO0 indicates the physical switch position (read-only, used to detect hardware changes)
+  const spdifoutTarget = (spdifoutValue & bits.enabledBit) !== 0
   const fallbackTarget = (spdifoutValue & 0x11) !== 0
-  const usedFallbackBitDetection = !primaryTarget && fallbackTarget
-  const gpio0SuggestsTarget = kind === 'MS2109' && gpio0Value === 0x01
-  const usedGpio0Fallback = !primaryTarget && !usedFallbackBitDetection && gpio0SuggestsTarget
+  const usedFallbackBitDetection = !spdifoutTarget && fallbackTarget
+
+  // Primary: use SPDIFOUT for mode determination
+  // GPIO0 is only tracked to detect when the physical switch has moved
+  const mode = spdifoutTarget || usedFallbackBitDetection ? 'target' : 'host'
+
+  log(`[USB Mode Read] chip=${kind} | GPIO0[0x${registers.gpio0.toString(16)}]=0x${gpio0Value?.toString(16).padStart(2, '0') ?? 'n/a'} | SPDIFOUT[0x${registers.spdifout.toString(16)}]=0x${spdifoutValue.toString(16).padStart(2, '0')} | spdifoutTarget=${spdifoutTarget} | fallbackBit=${usedFallbackBitDetection} | mode=${mode}`)
 
   return {
-    mode: primaryTarget || usedFallbackBitDetection || usedGpio0Fallback ? 'target' : 'host',
+    mode,
     chipKind: kind,
     gpio0Value,
     spdifoutValue,
+    gpio0Addr: registers.gpio0,
+    spdifoutAddr: registers.spdifout,
     firmwareVersionCode: bits.firmwareVersionCode,
     enabledBit: bits.enabledBit,
     clearMask: bits.clearMask,
     usedFallbackBitDetection,
-    usedGpio0Fallback,
+    usedGpio0Fallback: false,
   }
 }
 
@@ -183,8 +198,14 @@ export async function writeMs21xxUsbMode(device: Ms21xxWebHidDevice, mode: UsbMo
       : (currentValue & strategy.clearMask)
 
     await writeRegister(device, kind, registers.spdifout, nextValue)
-    const verify = await readMs21xxUsbModeDetails(device)
-    if (verify.mode === mode) {
+
+    // Verify by reading SPDIFOUT directly (not GPIO0, since software write only controls SPDIFOUT)
+    const verifySpdifout = await readRegister(device, kind, registers.spdifout)
+    const spdifoutMatchesTarget = mode === 'target'
+      ? (verifySpdifout & strategy.enabledBit) !== 0
+      : (verifySpdifout & strategy.enabledBit) === 0
+
+    if (spdifoutMatchesTarget) {
       return
     }
   }

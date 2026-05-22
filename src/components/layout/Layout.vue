@@ -60,7 +60,17 @@ const {
   capsLock,
   scrollLock,
   usbMode,
+  usbSyncStatus,
 } = useDeviceState()
+
+const { setUsbMode } = useSerial()
+
+function handleToggleUsbMode(): void {
+  if (!isConnected.value) return
+  const nextMode = usbMode.value === 'host' ? 'target' : 'host'
+  console.log(`[Layout] StatusBar click toggle USB mode: ${usbMode.value} → ${nextMode}`)
+  setUsbMode(nextMode)
+}
 
 const mouseX = computed(() => Math.round(mouse.mouse.x))
 const mouseY = computed(() => Math.round(mouse.mouse.y))
@@ -133,6 +143,8 @@ onUnmounted(() => {
           :caps-lock="capsLock"
           :scroll-lock="scrollLock"
           :usb-mode="usbMode"
+          :usb-sync-status="usbSyncStatus"
+          @toggle-usb-mode="handleToggleUsbMode"
         />
         <div class="w-5 h-px bg-slate-700 self-center my-1" />
         <BottomBar />

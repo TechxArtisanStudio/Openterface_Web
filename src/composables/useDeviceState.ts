@@ -2,7 +2,7 @@ import { computed } from 'vue'
 import { useSerial } from './useSerial'
 
 export function useDeviceState() {
-  const { deviceInfo, usbMode } = useSerial()
+  const { deviceInfo, usbMode, usbSyncStatus } = useSerial()
 
   const firmwareVersion = computed(() => deviceInfo.value?.firmwareVersion ?? '')
   const targetConnected = computed(() => deviceInfo.value?.targetConnected ?? false)
@@ -30,6 +30,7 @@ export function useDeviceState() {
     capsLock,
     scrollLock,
     usbMode,
+    usbSyncStatus,
     deviceSummary,
     lockIndicators,
   }

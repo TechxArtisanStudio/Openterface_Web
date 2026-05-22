@@ -4,6 +4,7 @@
  */
 import { useSerial } from './useSerial'
 import { getKeymod, isWasmReady } from './useWasm'
+import { hexDump } from '../utils/serial'
 
 const FRAME_HEAD = new Uint8Array([0x57, 0xab, 0x00])
 
@@ -86,6 +87,7 @@ export function useSerialCommands() {
   async function switchUsbToHost(): Promise<void> {
     const data = new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x00])
     const frame = buildFrame(0x17, data)
+    console.log(`[SerialCommands] switch USB to host: ${hexDump(frame)}`)
     await write(frame)
   }
 
@@ -93,6 +95,7 @@ export function useSerialCommands() {
   async function switchUsbToTarget(): Promise<void> {
     const data = new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x01])
     const frame = buildFrame(0x17, data)
+    console.log(`[SerialCommands] switch USB to target: ${hexDump(frame)}`)
     await write(frame)
   }
 
@@ -100,6 +103,7 @@ export function useSerialCommands() {
   async function checkUsbStatus(): Promise<void> {
     const data = new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x03])
     const frame = buildFrame(0x17, data)
+    console.log(`[SerialCommands] query USB status: ${hexDump(frame)}`)
     await write(frame)
   }
 

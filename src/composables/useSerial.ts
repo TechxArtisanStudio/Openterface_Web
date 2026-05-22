@@ -28,6 +28,7 @@ const baudrate = ref(0)
 const usbProductId = ref<number | null>(null)
 const usbModeHidDevice = ref<Ms21xxWebHidDevice | null>(null)
 const usbModeBackend = ref<'serial' | 'hid' | 'unsupported'>('unsupported')
+const usbSyncStatus = ref<'synced' | 'out-of-sync'>('synced')
 
 const parser = new FrameParser()
 
@@ -36,6 +37,7 @@ let usbModePollTimer: number | null = null
 let usbStatusQueryToken = 0
 let lastUsbStatusResponseToken = 0
 let usbStatusUnsupportedLogged = false
+let lastKnownGpio0: boolean | null = null
 
 export function useSerial() {
   const isConnected = computed(() => state.value === SerialState.Connected)
@@ -212,7 +214,9 @@ export function useSerial() {
     baudrate.value = 0
     usbProductId.value = null
     usbModeBackend.value = 'unsupported'
+    usbSyncStatus.value = 'synced'
     usbStatusUnsupportedLogged = false
+    lastKnownGpio0 = null
     log('Disconnected')
   }
 
@@ -382,7 +386,26 @@ export function useSerial() {
       const details = await readMs21xxUsbModeDetails(usbModeHidDevice.value)
       usbMode.value = details.mode
       usbModeBackend.value = 'hid'
-      log(`USB mode via WebHID: ${details.mode} | chip=${details.chipKind} | gpio0=${details.gpio0Value === null ? 'n/a' : `0x${details.gpio0Value.toString(16).padStart(2, '0')}`} | spdifout=0x${details.spdifoutValue.toString(16).padStart(2, '0')} | fw=${details.firmwareVersionCode ?? 'unknown'} | bit=0x${details.enabledBit.toString(16).padStart(2, '0')}${details.usedFallbackBitDetection ? ' | fallback-bit-detect' : ''}${details.usedGpio0Fallback ? ' | gpio0-fallback' : ''}`)
+
+      // Detect sync status between hardware switch (GPIO0) and software control (SPDIFOUT)
+      const gpio0Target = details.gpio0Value === 0x01
+      if (details.gpio0Value !== null && lastKnownGpio0 !== null && lastKnownGpio0 !== gpio0Target) {
+        // Hardware switch moved — sync SPDIFOUT to match
+        log(`Hardware switch moved (GPIO0 ${lastKnownGpio0 ? 'target' : 'host'} → ${gpio0Target ? 'target' : 'host'}), syncing SPDIFOUT`)
+        try {
+          await writeMs21xxUsbMode(usbModeHidDevice.value, gpio0Target ? 'target' : 'host')
+          log('SPDIFOUT synced to hardware switch')
+        } catch (err) {
+          log(`SPDIFOUT sync failed: ${err}`)
+        }
+      }
+      lastKnownGpio0 = gpio0Target
+
+      const spdifoutSet = (details.spdifoutValue & details.enabledBit) !== 0
+      const synced = details.gpio0Value === null || gpio0Target === spdifoutSet
+      usbSyncStatus.value = synced ? 'synced' : 'out-of-sync'
+
+      log(`USB mode: ${details.mode} | chip=${details.chipKind} | GPIO0[0x${details.gpio0Addr.toString(16)}]=0x${details.gpio0Value === null ? 'n/a' : details.gpio0Value.toString(16)} | SPDIFOUT[0x${details.spdifoutAddr.toString(16)}]=0x${details.spdifoutValue.toString(16)} | sync=${usbSyncStatus.value} | fw=${details.firmwareVersionCode ?? 'unknown'} | bit=0x${details.enabledBit.toString(16)}${details.usedFallbackBitDetection ? ' | fallback-bit-detect' : ''}`)
     } catch (err) {
       usbMode.value = 'unknown'
       usbModeBackend.value = 'unsupported'
@@ -557,6 +580,7 @@ export function useSerial() {
     deviceInfo,
     generation,
     usbMode,
+    usbSyncStatus,
     logLines,
     logEnabled,
     baudrate,
