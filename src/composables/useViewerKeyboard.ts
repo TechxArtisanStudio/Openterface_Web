@@ -37,7 +37,19 @@ export function useViewerKeyboard() {
 
     const code = event.code
     const km = getKeymod()
-    const hidCode = mapCodeToHid(code, km)
+
+    // ── Mapping verification: compare JS table vs Core ──────────────
+    const jsHidCode = mapCodeToHid(code, km)
+    const coreHidCode = km.hidCodeFromDomCode ? km.hidCodeFromDomCode(code) : -1
+    console.log(
+      '[Keyboard] mapping comparison:',
+      'code=' + code,
+      'JS=' + jsHidCode.toString(16),
+      'Core=' + coreHidCode.toString(16),
+      'match=' + (jsHidCode === coreHidCode ? 'YES' : 'MISMATCH')
+    )
+    // Use JS mapping for now; after verification passes, switch to Core
+    const hidCode = jsHidCode
     if (hidCode < 0) {
       console.warn('[Keyboard] unmapped code:', code)
       return

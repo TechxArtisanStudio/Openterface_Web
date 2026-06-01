@@ -29,6 +29,7 @@ const emit = defineEmits<{
 const props = defineProps<{
   mouseX?: number
   mouseY?: number
+  mouseEnabled?: boolean
 }>()
 
 defineExpose({ videoRef })
@@ -96,6 +97,16 @@ function toggleFullscreen(): void {
     <div
       class="absolute top-2 right-2 flex flex-col items-end gap-1"
     >
+      <!-- Mouse Status Indicator -->
+      <span
+        class="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium pointer-events-none"
+        :class="mouseEnabled ? 'bg-green-800/80 text-green-300' : 'bg-red-800/80 text-red-300'"
+      >
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/>
+        </svg>
+        Mouse {{ mouseEnabled ? 'ON' : 'OFF' }}
+      </span>
       <span
         class="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-slate-800/80 text-slate-300 pointer-events-none"
       >

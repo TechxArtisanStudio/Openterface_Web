@@ -57,7 +57,7 @@ export const GENERATIONS = {
     captureVid: 0x534d,
     capturePid: 0x2109,
     hidChip: 'MS2109' as const,
-    baudrate: 115200,
+    baudrate: 9600,
     usbModeBackend: 'hid' as const,
   },
   GEN2: {

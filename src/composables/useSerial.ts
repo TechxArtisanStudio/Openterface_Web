@@ -235,6 +235,7 @@ export function useSerial() {
   async function write(data: Uint8Array): Promise<void> {
     if (!writer || state.value !== SerialState.Connected) {
       log(`Cannot write: state=${state.value}, writer=${!!writer}`)
+      console.warn('[Serial] write BLOCKED: state=', state.value, 'writer=', !!writer)
       return
     }
     try {
@@ -242,6 +243,7 @@ export function useSerial() {
       await writer.write(data)
     } catch (err) {
       log(`Write error: ${err}`)
+      console.error('[Serial] Write error:', err)
     }
   }
 

@@ -12,7 +12,7 @@ export function useSerialCommands() {
   const { write } = useSerial()
   const km = () => {
     if (!isWasmReady()) {
-      console.warn('[SerialCommands] WASM not ready, skipping command')
+      console.warn('[SerialCommands] Core WASM not ready, skipping command')
       return null
     }
     return getKeymod()
@@ -57,11 +57,16 @@ export function useSerialCommands() {
     wheel: number,
   ): Promise<void> {
     const k = km()
-    if (!k) return
+    if (!k) {
+      console.warn('[SerialCommands] sendMouseAbsolute aborted: keymod unavailable')
+      return
+    }
     const clampedX = Math.max(0, Math.min(4095, x))
     const clampedY = Math.max(0, Math.min(4095, y))
+    console.log('[SerialCommands] sendMouseAbsolute: btn=' + buttons, 'x=' + clampedX, 'y=' + clampedY, 'wheel=' + wheel)
     const packet = k.buildMouseAbs(buttons, clampedX, clampedY, wheel)
     await write(packet)
+    console.log('[SerialCommands] mouse packet sent OK, len=' + packet.length)
   }
 
   /** Send a relative mouse report (uses WASM) */
@@ -85,24 +90,27 @@ export function useSerialCommands() {
 
   /** Switch USB to host mode */
   async function switchUsbToHost(): Promise<void> {
-    const data = new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x00])
-    const frame = buildFrame(0x17, data)
+    const k = km()
+    if (!k) return
+    const frame = k.buildUsbSwitch(0x00)
     console.log(`[SerialCommands] switch USB to host: ${hexDump(frame)}`)
     await write(frame)
   }
 
   /** Switch USB to target mode */
   async function switchUsbToTarget(): Promise<void> {
-    const data = new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x01])
-    const frame = buildFrame(0x17, data)
+    const k = km()
+    if (!k) return
+    const frame = k.buildUsbSwitch(0x01)
     console.log(`[SerialCommands] switch USB to target: ${hexDump(frame)}`)
     await write(frame)
   }
 
   /** Check current USB switch status */
   async function checkUsbStatus(): Promise<void> {
-    const data = new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x03])
-    const frame = buildFrame(0x17, data)
+    // USB status query uses a different frame (CMD_SWITCH_USB with param 0x03)
+    // No dedicated Core builder for the query, so use plain frame
+    const frame = buildFrame(0x17, new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x03]))
     console.log(`[SerialCommands] query USB status: ${hexDump(frame)}`)
     await write(frame)
   }

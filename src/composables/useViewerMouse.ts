@@ -16,42 +16,64 @@ export function useViewerMouse() {
   const { sendMouseAbsolute: serialSendMouseAbs } = useSerialCommands()
 
   function handleClick(e: MouseEvent): void {
-    if (!enabled.value || !isConnected.value) return
+    e.preventDefault()
+    e.stopPropagation()
+    console.log('[Mouse] mousedown button=', e.button, 'enabled=', enabled.value, 'isConnected=', isConnected.value)
+    if (!enabled.value || !isConnected.value) {
+      console.warn('[Mouse] BLOCKED: enabled=', enabled.value, 'isConnected=', isConnected.value)
+      return
+    }
     isPressed = true
     currentButton = mapButton(e.button)
     updatePosition(e)
     const { pixelX, pixelY, absX, absY } = getAbsoluteCoords()
     mouse.x = pixelX
     mouse.y = pixelY
+    console.log('[Mouse] send press: btn=', currentButton, 'pixel=(', pixelX, ',', pixelY, ') abs=(', absX, ',', absY, ')')
     serialSendMouseAbs(currentButton, absX, absY, 0)
   }
 
   function handleMouseUp(e: MouseEvent): void {
-    isPressed = false
+    e.preventDefault()
+    e.stopPropagation()
     const btn = currentButton
+    isPressed = false
     currentButton = 0
-    if (!enabled.value || !isConnected.value) return
+    console.log('[Mouse] mouseup released_btn=', btn, 'enabled=', enabled.value, 'isConnected=', isConnected.value)
+    if (!enabled.value || !isConnected.value) {
+      console.warn('[Mouse] mouseup BLOCKED: enabled=', enabled.value, 'isConnected=', isConnected.value)
+      return
+    }
     updatePosition(e)
     const { pixelX, pixelY, absX, absY } = getAbsoluteCoords()
     mouse.x = pixelX
     mouse.y = pixelY
+    console.log('[Mouse] send release: btn=0 pixel=(', pixelX, ',', pixelY, ') abs=(', absX, ',', absY, ')')
     serialSendMouseAbs(0, absX, absY, 0)
   }
 
   function handleMouseMove(e: MouseEvent): void {
     updatePosition(e)
     if (!enabled.value || !isConnected.value) {
+      console.warn('[Mouse] move BLOCKED: enabled=', enabled.value, 'isConnected=', isConnected.value)
       return
     }
+    e.preventDefault()
+    e.stopPropagation()
 
     const { pixelX, pixelY, absX, absY } = getAbsoluteCoords()
     mouse.x = pixelX
     mouse.y = pixelY
-    serialSendMouseAbs(isPressed ? currentButton : 0, absX, absY, 0)
+    const btn = isPressed ? currentButton : 0
+    console.log('[Mouse] move: btn=', btn, 'pixel=(', pixelX, ',', pixelY, ') abs=(', absX, ',', absY, ')')
+    serialSendMouseAbs(btn, absX, absY, 0)
   }
 
   function handleWheel(e: WheelEvent): void {
-    if (!enabled.value || !isConnected.value) return
+    if (!enabled.value || !isConnected.value) {
+      console.warn('[Mouse] wheel BLOCKED: enabled=', enabled.value, 'isConnected=', isConnected.value)
+      return
+    }
     e.preventDefault()
     e.stopPropagation()
     const delta = e.deltaY > 0 ? 0xff : 0x01
@@ -69,12 +91,18 @@ export function useViewerMouse() {
   }
 
   function getAbsoluteCoords(): { pixelX: number; pixelY: number; absX: number; absY: number } {
-    if (!videoEl.value) return { pixelX: 0, pixelY: 0, absX: 0, absY: 0 }
+    if (!videoEl.value) {
+      console.warn('[Mouse] getAbsoluteCoords: videoEl is null')
+      return { pixelX: 0, pixelY: 0, absX: 0, absY: 0 }
+    }
     const rect = lastContainerRect ?? videoEl.value.getBoundingClientRect()
     const nativeW = videoEl.value.videoWidth
     const nativeH = videoEl.value.videoHeight
 
-    if (!nativeW || !nativeH) return { pixelX: 0, pixelY: 0, absX: 0, absY: 0 }
+    if (!nativeW || !nativeH) {
+      console.warn('[Mouse] getAbsoluteCoords: video dimensions is 0, nativeW=', nativeW, 'nativeH=', nativeH)
+      return { pixelX: 0, pixelY: 0, absX: 0, absY: 0 }
+    }
 
     const nativeAspect = nativeW / nativeH
     const containerAspect = rect.width / rect.height

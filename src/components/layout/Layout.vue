@@ -36,6 +36,7 @@ watchEffect(() => {
 
 // Auto-enable keyboard and mouse when serial connects
 watch(isConnected, (connected) => {
+  console.log('[Layout] watch(isConnected) fired →', connected)
   if (connected) {
     keyboard.enabled.value = true
     mouse.enabled.value = true
@@ -45,7 +46,7 @@ watch(isConnected, (connected) => {
     mouse.enabled.value = false
     console.log('[Layout] serial disconnected — keyboard and mouse disabled')
   }
-})
+}, { immediate: true })
 
 // Provide keyboard/mouse state to child components for button styling
 
@@ -74,14 +75,15 @@ function handleToggleUsbMode(): void {
 
 const mouseX = computed(() => Math.round(mouse.mouse.x))
 const mouseY = computed(() => Math.round(mouse.mouse.y))
+const mouseEnabled = computed(() => mouse.enabled.value)
 
 onMounted(async () => {
   try {
     await loadWasm()
-    console.log('[Layout] WASM loaded successfully')
+    console.log('[Layout] Core WASM loaded successfully')
   } catch (err) {
-    console.error('[Layout] WASM failed to load:', err)
-    console.error('[Layout] Keyboard and mouse input will not work without WASM')
+    console.error('[Layout] Core WASM failed to load:', err)
+    console.error('[Layout] Keyboard and mouse input will not work without Core WASM')
   }
 
   if (detection.mediaDevices) {
@@ -135,6 +137,7 @@ onUnmounted(() => {
           @wheel="mouse.handleWheel"
           :mouse-x="mouseX"
           :mouse-y="mouseY"
+          :mouse-enabled="mouseEnabled"
         />
       </div>
       <div class="flex flex-col w-12 shrink-0">
