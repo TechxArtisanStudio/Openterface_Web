@@ -54,6 +54,10 @@ function onVideoMouseMove(e: MouseEvent): void {
   mouse.handleMouseMove(e)
 }
 
+function onCenterMouse(): void {
+  void mouse.centerCursor()
+}
+
 const {
   firmwareVersion,
   targetConnected,
@@ -76,6 +80,9 @@ function handleToggleUsbMode(): void {
 const mouseX = computed(() => Math.round(mouse.mouse.x))
 const mouseY = computed(() => Math.round(mouse.mouse.y))
 const mouseEnabled = computed(() => mouse.enabled.value)
+const targetMouseX = computed(() => Math.round(mouse.target.x))
+const targetMouseY = computed(() => Math.round(mouse.target.y))
+const targetMouseReady = computed(() => mouse.target.hasPosition)
 
 onMounted(async () => {
   try {
@@ -135,9 +142,13 @@ onUnmounted(() => {
           @mouseup="mouse.handleMouseUp"
           @mousemove="onVideoMouseMove"
           @wheel="mouse.handleWheel"
+          @center-mouse="onCenterMouse"
           :mouse-x="mouseX"
           :mouse-y="mouseY"
           :mouse-enabled="mouseEnabled"
+          :target-mouse-x="targetMouseX"
+          :target-mouse-y="targetMouseY"
+          :target-mouse-ready="targetMouseReady"
         />
       </div>
       <div class="flex flex-col w-12 shrink-0">

@@ -2,15 +2,16 @@
 import { ref } from 'vue'
 import { useViewerMedia, CAMERA_RESOLUTIONS } from '../../composables/useViewerMedia'
 import { useSerial } from '../../composables/useSerial'
+import { useInputSettings } from '../../composables/useInputSettings'
 
 const emit = defineEmits<{ close: [] }>()
 
-const mouseMode = ref<'absolute' | 'relative'>('absolute')
 const pasteDelay = ref(30)
 const showAllDevices = ref(false)
 
 const media = useViewerMedia()
 const serial = useSerial()
+const { mouseMode, setMouseMode } = useInputSettings()
 
 async function applyResolution(res: typeof CAMERA_RESOLUTIONS[number]): Promise<void> {
   await media.applySettings({ width: res.width, height: res.height })
@@ -73,14 +74,14 @@ function forgetDevices(): void {
           <label class="block text-sm font-medium text-slate-300 mb-1.5">Mouse Mode</label>
           <div class="flex gap-2">
             <button
-              @click="mouseMode = 'absolute'"
+              @click="setMouseMode('absolute')"
               class="flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors"
               :class="mouseMode === 'absolute' ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'"
             >
               Absolute
             </button>
             <button
-              @click="mouseMode = 'relative'"
+              @click="setMouseMode('relative')"
               class="flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors"
               :class="mouseMode === 'relative' ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'"
             >

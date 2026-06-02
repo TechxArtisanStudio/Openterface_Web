@@ -24,12 +24,16 @@ const emit = defineEmits<{
   'mouseup': [e: MouseEvent]
   'mousemove': [e: MouseEvent]
   'wheel': [e: WheelEvent]
+  'center-mouse': []
 }>()
 
 const props = defineProps<{
   mouseX?: number
   mouseY?: number
   mouseEnabled?: boolean
+  targetMouseX?: number
+  targetMouseY?: number
+  targetMouseReady?: boolean
 }>()
 
 defineExpose({ videoRef })
@@ -65,11 +69,6 @@ function toggleFullscreen(): void {
 <template>
   <div
     class="relative w-full h-full bg-black flex items-center justify-center"
-    @contextmenu.prevent
-    @mousedown="$emit('mousedown', $event)"
-    @mouseup="$emit('mouseup', $event)"
-    @mousemove="$emit('mousemove', $event)"
-    @wheel="$emit('wheel', $event)"
   >
     <!-- Video Element -->
     <video
@@ -78,6 +77,11 @@ function toggleFullscreen(): void {
       autoplay
       muted
       playsinline
+      @contextmenu.prevent
+      @mousedown="$emit('mousedown', $event)"
+      @mouseup="$emit('mouseup', $event)"
+      @mousemove="$emit('mousemove', $event)"
+      @wheel="$emit('wheel', $event)"
       @play="console.log('[VideoStream] video playing, videoWidth:', videoRef?.videoWidth, 'videoHeight:', videoRef?.videoHeight, 'enabled:', media.enabled.value)"
       @error="console.log('[VideoStream] video error:', $event)"
     />
@@ -153,8 +157,27 @@ function toggleFullscreen(): void {
         v-if="media.currentSettings.value?.width && media.currentSettings.value?.height"
         class="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-slate-800/80 text-slate-300 pointer-events-none"
       >
-        X: {{ mouseX }}, Y: {{ mouseY }}
+        Target X: {{ props.targetMouseReady ? props.targetMouseX : '—' }}, Y: {{ props.targetMouseReady ? props.targetMouseY : '—' }}
       </span>
+      <span
+        v-if="media.currentSettings.value?.width && media.currentSettings.value?.height"
+        class="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-slate-800/80 text-slate-400 pointer-events-none"
+      >
+        Pointer X: {{ props.mouseX }}, Y: {{ props.mouseY }}
+      </span>
+      <button
+        v-if="media.currentSettings.value?.width && media.currentSettings.value?.height"
+        @click.stop="emit('center-mouse')"
+        @mousedown.stop
+        @mouseup.stop
+        class="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-slate-800/80 text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"
+        title="Center target mouse and reset page tracking"
+      >
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v3m0 12v3m9-9h-3M6 12H3m12.364 6.364l-2.121-2.121M8.757 8.757L6.636 6.636m9.728 0l-2.121 2.121M8.757 15.243l-2.121 2.121M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        Center
+      </button>
     </div>
 
     <!-- Fullscreen Button -->

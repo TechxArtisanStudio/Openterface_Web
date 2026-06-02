@@ -137,22 +137,7 @@ export async function loadWasm(): Promise<CoreWASM> {
       buildMouseAbs(buttons: number, x: number, y: number, wheel: number): Uint8Array {
         const outPtr = _malloc(13)
         ccall('op_ch9329_build_mouse_abs_packet', null, ['number', 'number', 'number', 'number', 'number'], [outPtr, buttons, x, y, wheel])
-        // C produces 13 bytes with a 0x01 protocol indicator at position 5.
-        // CH9329 standard absolute mouse frame is 12 bytes without that indicator:
-        //   57 AB 00 04 07 buttons x_lo x_hi y_lo y_hi wheel checksum
-        // Overwrite to remove 0x01, shift data left, and truncate to 12 bytes.
-        heapU8[outPtr + 4] = 0x07
-        heapU8[outPtr + 5] = buttons
-        heapU8[outPtr + 6] = x & 0xFF
-        heapU8[outPtr + 7] = (x >> 8) & 0xFF
-        heapU8[outPtr + 8] = y & 0xFF
-        heapU8[outPtr + 9] = (y >> 8) & 0xFF
-        heapU8[outPtr + 10] = wheel & 0xFF
-        // Recalculate checksum for 12-byte packet (sum bytes 0..10)
-        let sum = 0
-        for (let i = 0; i < 11; i++) sum += heapU8[outPtr + i]
-        heapU8[outPtr + 11] = sum & 0xFF
-        const result = new Uint8Array(heapU8.slice(outPtr, outPtr + 12))
+        const result = new Uint8Array(heapU8.slice(outPtr, outPtr + 13))
         _free(outPtr)
         console.log('[Core] buildMouseAbs: btn=' + buttons, 'x=' + x, 'y=' + y, 'wheel=' + wheel, 'packet=' + Array.from(result).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '))
         return result

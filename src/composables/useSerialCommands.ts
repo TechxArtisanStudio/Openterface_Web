@@ -20,10 +20,8 @@ export function useSerialCommands() {
 
   /** Send a keyboard press+release (single key) */
   async function sendKeyPress(modifiers: number, hidCode: number): Promise<void> {
-    const k = km()
-    if (!k) return
-    const packet = k.buildPressRelease(modifiers, hidCode)
-    await write(packet)
+    await sendKeyDown(modifiers, hidCode)
+    await sendKeyUp()
   }
 
   /** Send a keyboard press (keys held down) */
@@ -65,8 +63,14 @@ export function useSerialCommands() {
     const clampedY = Math.max(0, Math.min(4095, y))
     console.log('[SerialCommands] sendMouseAbsolute: btn=' + buttons, 'x=' + clampedX, 'y=' + clampedY, 'wheel=' + wheel)
     const packet = k.buildMouseAbs(buttons, clampedX, clampedY, wheel)
-    await write(packet)
-    console.log('[SerialCommands] mouse packet sent OK, len=' + packet.length)
+    console.log('[SerialCommands] sendMouseAbsolute packet=' + hexDump(packet))
+    try {
+      await write(packet)
+      console.log('[SerialCommands] sendMouseAbsolute write OK, len=' + packet.length)
+    } catch (error) {
+      console.error('[SerialCommands] sendMouseAbsolute write FAIL', error)
+      throw error
+    }
   }
 
   /** Send a relative mouse report (uses WASM) */
@@ -78,7 +82,11 @@ export function useSerialCommands() {
   ): Promise<void> {
     const k = km()
     if (!k) return
-    const packet = k.buildMouseRel(buttons, dx, dy, wheel)
+    const clampedDx = Math.max(-127, Math.min(127, Math.trunc(dx)))
+    const clampedDy = Math.max(-127, Math.min(127, Math.trunc(dy)))
+    const clampedWheel = Math.max(-127, Math.min(127, Math.trunc(wheel)))
+    console.log('[SerialCommands] sendMouseRelative: btn=' + buttons, 'dx=' + clampedDx, 'dy=' + clampedDy, 'wheel=' + clampedWheel)
+    const packet = k.buildMouseRel(buttons, clampedDx, clampedDy, clampedWheel)
     await write(packet)
   }
 
