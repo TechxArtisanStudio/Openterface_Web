@@ -11,6 +11,7 @@ import { useViewerMedia } from '../../composables/useViewerMedia'
 import { useDeviceState } from '../../composables/useDeviceState'
 import { loadWasm } from '../../composables/useWasm'
 import { useBrowserDetection } from '../../composables/useBrowserDetection'
+import { useLockState } from '../../composables/useLockState'
 
 const emit = defineEmits<{
   'show-warning': []
@@ -61,20 +62,22 @@ function onCenterMouse(): void {
 const {
   firmwareVersion,
   targetConnected,
-  numLock,
-  capsLock,
-  scrollLock,
   usbMode,
   usbSyncStatus,
 } = useDeviceState()
 
 const { setUsbMode } = useSerial()
+const { numLock, capsLock, scrollLock, toggleLock } = useLockState()
 
 function handleToggleUsbMode(): void {
   if (!isConnected.value) return
   const nextMode = usbMode.value === 'host' ? 'target' : 'host'
   console.log(`[Layout] StatusBar click toggle USB mode: ${usbMode.value} → ${nextMode}`)
   setUsbMode(nextMode)
+}
+
+function handleToggleLock(key: 'numLock' | 'capsLock' | 'scrollLock'): void {
+  void toggleLock(key)
 }
 
 const mouseX = computed(() => Math.round(mouse.mouse.x))
@@ -159,6 +162,7 @@ onUnmounted(() => {
           :usb-mode="usbMode"
           :usb-sync-status="usbSyncStatus"
           @toggle-usb-mode="handleToggleUsbMode"
+          @toggle-lock="handleToggleLock"
         />
         <div class="w-5 h-px bg-slate-700 self-center my-1" />
         <BottomBar />

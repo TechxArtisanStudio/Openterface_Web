@@ -2,6 +2,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useSerial } from './useSerial'
 import { getKeymod, isWasmReady } from './useWasm'
 import { useSerialCommands } from './useSerialCommands'
+import { useLockState } from './useLockState'
 
 // Module-level modifier state
 const activeModifiers = {
@@ -13,6 +14,7 @@ export function useViewerKeyboard() {
   const enabled = ref(false)
   const { isConnected, queryDeviceInfo } = useSerial()
   const { sendKeyPress, sendKeyUp } = useSerialCommands()
+  const { toggleLockKeyFromKeyboard } = useLockState()
 
   const keyDownHandler = (e: KeyboardEvent) => handleEvent(e, true)
   const keyUpHandler = (e: KeyboardEvent) => handleEvent(e, false)
@@ -69,7 +71,7 @@ export function useViewerKeyboard() {
       console.log('[Keyboard] sending keyPress, modifiers:', modifiers.toString(16), 'hidCode:', hidCode.toString(16))
       sendKeyPress(modifiers, hidCode)
       if (isLockKey) {
-        setTimeout(() => queryDeviceInfo(), 50)
+        void toggleLockKeyFromKeyboard(hidCode)
       }
     }
   }
