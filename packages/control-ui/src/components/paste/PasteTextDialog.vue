@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { usePasteText } from '../../composables/usePasteText'
-import { useSerial } from '../../composables/useSerial'
+import { ref, inject } from 'vue'
+import { HIDTransportKey } from '@openterface/core'
+import { usePasteText } from '@openterface/core'
 
 const emit = defineEmits<{ close: [] }>()
 
+const transport = inject(HIDTransportKey)!
 const text = ref('')
-const { isConnected } = useSerial()
 const { isPasting, progress, totalChars, delay, error, paste, cancel, pasteFromClipboard } = usePasteText()
 
 async function doPaste(): Promise<void> {
@@ -71,7 +71,7 @@ async function doPaste(): Promise<void> {
       <div class="flex items-center justify-between mt-4">
         <button
           @click="pasteFromClipboard()"
-          :disabled="isPasting || !isConnected"
+          :disabled="isPasting || !transport.isConnected.value"
           class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           Paste from Clipboard
@@ -86,7 +86,7 @@ async function doPaste(): Promise<void> {
           </button>
           <button
             @click="doPaste()"
-            :disabled="isPasting || !text.trim() || !isConnected"
+            :disabled="isPasting || !text.trim() || !transport.isConnected.value"
             class="px-4 py-1.5 rounded-lg text-xs font-medium bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {{ isPasting ? 'Typing...' : 'Send' }}

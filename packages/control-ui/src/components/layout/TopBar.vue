@@ -1,43 +1,25 @@
 <script setup lang="ts">
-import { ref, computed, inject } from 'vue'
-import { useSerial } from '../../composables/useSerial'
-import { useViewerMedia } from '../../composables/useViewerMedia'
+import { computed, inject } from 'vue'
+import { HIDTransportKey, TransportState } from '@openterface/core'
 import { useBrowserDetection } from '../../composables/useBrowserDetection'
 import CameraSelector from '../video/CameraSelector.vue'
 import type { Ref } from 'vue'
 
-const { state, connect, disconnect, isConnected } = useSerial()
-const media = useViewerMedia()
-const detection = useBrowserDetection()
+const transport = inject(HIDTransportKey)!
 const videoElRef = inject<Ref<HTMLVideoElement | null>>('videoEl')
+const detection = useBrowserDetection()
 
-async function toggleMonitor() {
-  console.log('[TopBar] toggleMonitor, enabled:', media.enabled.value, 'videoEl:', !!videoElRef?.value)
-  if (media.enabled.value) {
-    media.disconnect()
-    console.log('[TopBar] monitor disconnected')
-  } else {
-    const result = await media.connect(videoElRef?.value)
-    console.log('[TopBar] monitor connect result:', result)
-  }
-}
-
-async function toggleSerial() {
-  if (isConnected.value) {
-    await disconnect()
-  } else {
-    await connect()
-  }
-}
-
+// These are USB-specific - exposed via transport state
+// WebRTC uses remote video, USB uses getUserMedia
+// The transport's deviceInfo and state provide the connection info
 const stateLabel = computed(() => {
-  switch (state.value) {
-    case 'opening':
+  switch (transport.state.value) {
+    case TransportState.Connecting:
       return 'Connecting...'
-    case 'connected':
-      return 'Serial Connected'
+    case TransportState.Connected:
+      return 'Connected'
     default:
-      return 'Serial Disconnected'
+      return 'Disconnected'
   }
 })
 </script>
@@ -57,30 +39,16 @@ const stateLabel = computed(() => {
 
     <div class="h-5 w-px bg-slate-700 mx-1 shrink-0" />
 
-    <!-- Monitor Toggle -->
-    <button
-      @click="toggleMonitor"
-      class="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors"
-      :class="media.enabled.value ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'"
-    >
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-      </svg>
-      {{ media.enabled.value ? 'Monitor ON' : 'Monitor OFF' }}
-    </button>
-
-    <!-- Serial Toggle (only if full support) -->
-    <button
-      v-if="detection.fullSupport"
-      @click="toggleSerial"
-      class="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors"
-      :class="isConnected ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'"
+    <!-- Connection Status -->
+    <div
+      class="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
+      :class="transport.isConnected.value ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
       </svg>
       {{ stateLabel }}
-    </button>
+    </div>
 
     <!-- Spacer -->
     <div class="flex-1" />

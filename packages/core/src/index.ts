@@ -29,3 +29,5 @@ export { loadWasm, getKeymod, isWasmReady, type KeymodWASM } from './wasm/useWas
 
 // Composables
 export { useHidCommands } from './composables/useHidCommands'
+export { useViewerKeyboard } from './composables/useViewerKeyboard'
+export { usePasteText } from './composables/usePasteText'

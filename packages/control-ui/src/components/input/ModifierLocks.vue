@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useSerial } from '../../composables/useSerial'
-import { useSerialCommands } from '../../composables/useSerialCommands'
+import { ref, computed, inject } from 'vue'
+import { HIDTransportKey, useHidCommands } from '@openterface/core'
 
-const { isConnected } = useSerial()
-const { sendKeyDown, sendKeyUp, toggleLockKey } = useSerialCommands()
+const transport = inject(HIDTransportKey)!
+const { sendKeyDown, sendKeyUp, toggleLockKey } = useHidCommands()
 
 const shiftLock = ref(false)
 const ctrlLock = ref(false)
@@ -21,9 +20,9 @@ const activeModifiers = computed(() => {
 })
 
 async function sendWithLock(key: string, hidCode: number): Promise<void> {
-  if (!isConnected.value) return
+  if (!transport.isConnected.value) return
   const mod = activeModifiers.value
-  await sendKeyDown(mod, hidCode)
+  await sendKeyDown(mod, [hidCode])
   setTimeout(async () => await sendKeyUp(), 100)
 }
 
@@ -69,7 +68,7 @@ const functionKeys = [
       v-for="fk in functionKeys"
       :key="fk.label"
       @click="sendWithLock(fk.label, fk.code)"
-      :disabled="!isConnected"
+      :disabled="!transport.isConnected.value"
       class="px-1 py-0.5 rounded text-xs font-mono bg-slate-800 text-slate-500 hover:bg-slate-700 hover:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
     >
       {{ fk.label }}

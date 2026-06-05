@@ -1,17 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useSerial } from '../../composables/useSerial'
-import { useSerialCommands } from '../../composables/useSerialCommands'
-import { useDeviceState } from '../../composables/useDeviceState'
+import { computed, inject } from 'vue'
+import { HIDTransportKey, useHidCommands } from '@openterface/core'
+import { useDeviceState } from '../composables/useDeviceState'
 
-const { isConnected } = useSerial()
-const { switchUsbToHost, switchUsbToTarget } = useSerialCommands()
+const transport = inject(HIDTransportKey)!
+const { switchUsbToHost, switchUsbToTarget } = useHidCommands()
 const { usbMode } = useDeviceState()
 
 const isHost = computed(() => usbMode.value === 'host')
 
 async function setMode(mode: 'host' | 'target'): Promise<void> {
-  if (!isConnected.value) return
+  if (!transport.isConnected.value) return
   if (mode === 'host') {
     await switchUsbToHost()
     usbMode.value = 'host'
@@ -26,7 +25,7 @@ async function setMode(mode: 'host' | 'target'): Promise<void> {
   <div class="flex items-center rounded-lg bg-slate-800 p-0.5">
     <button
       @click="setMode('host')"
-      :disabled="!isConnected"
+      :disabled="!transport.isConnected.value"
       class="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all"
       :class="isHost
         ? 'bg-blue-500 text-white shadow'
@@ -40,7 +39,7 @@ async function setMode(mode: 'host' | 'target'): Promise<void> {
     </button>
     <button
       @click="setMode('target')"
-      :disabled="!isConnected"
+      :disabled="!transport.isConnected.value"
       class="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all"
       :class="!isHost
         ? 'bg-emerald-500 text-white shadow'

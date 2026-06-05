@@ -1,10 +1,12 @@
-import { ref, computed } from 'vue'
-import { useSerial } from './useSerial'
+import { ref, computed, inject } from 'vue'
+import { HIDTransportKey, type TransportDeviceInfo } from '@openterface/core'
 
 export const usbMode = ref<'host' | 'target'>('target')
 
 export function useDeviceState() {
-  const { deviceInfo } = useSerial()
+  const transport = inject(HIDTransportKey)!
+
+  const deviceInfo = computed(() => transport.deviceInfo.value)
 
   const firmwareVersion = computed(() => deviceInfo.value?.firmwareVersion ?? '')
   const targetConnected = computed(() => deviceInfo.value?.targetConnected ?? false)
