@@ -1,0 +1,22 @@
+{
+  "name": "@openterface/core",
+  "version": "0.2.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "vue-tsc --noEmit --skipLibCheck"
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "vue-tsc": "^2.2.10"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.13"
+  }
+}

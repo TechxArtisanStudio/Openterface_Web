@@ -1,0 +1,25 @@
+{
+  "name": "@openterface/webrtc",
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --outDir dist/webrtc-android --base ./",
+    "typecheck": "vue-tsc --noEmit --skipLibCheck",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@openterface/core": "*",
+    "@openterface/control-ui": "*",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.3",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.4",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vue-tsc": "^2.2.10"
+  }
+}

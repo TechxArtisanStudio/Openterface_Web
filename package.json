@@ -1,13 +1,19 @@
 {
-  "name": "openterface-web",
+  "name": "openterface-web-monorepo",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "typecheck": "vue-tsc --noEmit --skipLibCheck",
-    "preview": "vite preview"
+    "dev:usb": "npm -w @openterface/usb run dev",
+    "dev:webrtc": "npm -w @openterface/webrtc run dev",
+    "build:usb": "npm -w @openterface/usb run build",
+    "build:webrtc:android": "npm -w @openterface/webrtc run build",
+    "preview:usb": "npm -w @openterface/usb run preview",
+    "preview:webrtc": "npm -w @openterface/webrtc run preview",
+    "typecheck": "npm run typecheck -ws"
   },
   "dependencies": {
     "vue": "^3.5.13"
