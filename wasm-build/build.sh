@@ -68,9 +68,11 @@ echo "[wasm] Output: $OUT_DIR/openterface.js"
 echo "[wasm] Output: $OUT_DIR/openterface.wasm"
 ls -lh "$OUT_DIR/openterface.wasm"
 
-# Copy to canonical location for npm workspace consumption
+# If output directory is not already the canonical location, copy there
 CORE_WASM="packages/core/wasm"
-mkdir -p "$CORE_WASM"
-cp "$OUT_DIR/openterface.js" "$CORE_WASM/openterface.js" 2>/dev/null || { echo "[wasm] Error: Could not copy JS to $CORE_WASM"; exit 1; }
-cp "$OUT_DIR/openterface.wasm" "$CORE_WASM/openterface.wasm" 2>/dev/null || { echo "[wasm] Error: Could not copy WASM to $CORE_WASM"; exit 1; }
-echo "[wasm] Copied to $CORE_WASM/"
+if [ "$OUT_DIR" != "$CORE_WASM" ]; then
+  mkdir -p "$CORE_WASM"
+  cp "$OUT_DIR/openterface.js" "$CORE_WASM/openterface.js" || { echo "[wasm] Error: Could not copy JS to $CORE_WASM"; exit 1; }
+  cp "$OUT_DIR/openterface.wasm" "$CORE_WASM/openterface.wasm" || { echo "[wasm] Error: Could not copy WASM to $CORE_WASM"; exit 1; }
+  echo "[wasm] Copied to $CORE_WASM/"
+fi
