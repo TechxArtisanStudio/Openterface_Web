@@ -6,3 +6,10 @@ Openterface_Core/build/
 # HTTPS dev certs
 server.crt
 server.key
+
+# WASM build output (canonically stored in packages/core/wasm/)
+packages/core/wasm/
+
+# Public directory: keep structure, ignore build output
+public/
+!public/.gitkeep

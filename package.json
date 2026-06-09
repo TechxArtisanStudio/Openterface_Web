@@ -10,7 +10,8 @@
   "scripts": {
     "dev:usb": "npm -w @openterface/usb run dev",
     "dev:webrtc": "npm -w @openterface/webrtc run dev",
-    "build": "npm run build:usb && npm run build:webrtc:android && npm run build:combine",
+    "build": "npm run build:wasm && npm run build:usb && npm run build:webrtc:android && npm run build:combine",
+    "build:wasm": "bash wasm-build/build.sh Openterface_Core packages/core/wasm",
     "build:usb": "npm -w @openterface/usb run build",
     "build:webrtc:android": "npm -w @openterface/webrtc run build",
     "build:combine": "rm -rf dist && mkdir -p dist && cp -r packages/usb/dist/* dist/ && mkdir -p dist/webrtc-android && cp -r submodules/Openterface_WebUI/packages/webrtc/dist/webrtc-android/* dist/webrtc-android/",
