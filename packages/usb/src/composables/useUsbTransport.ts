@@ -1,23 +1,16 @@
 /// <reference types="w3c-web-serial" />
 
 import { ref, computed } from 'vue'
-import {
-  TransportState,
-  type TransportDeviceInfo,
-  type HIDTransport,
-  Command,
-  FrameParser,
-  USB,
-  hexDump,
-} from '@openterface/core'
+import { SerialState, type DeviceInfo } from '../types/serial'
+import { USB, FrameParser, Command, hexDump } from '../utils/serial'
 
-// Module-level shared state
-const serialPort = ref<SerialPort | null>(null)
+// Module-level shared state so all callers see the same values
+export const serialPort = ref<SerialPort | null>(null)
 let writer: WritableStreamDefaultWriter | null = null
 let readLoopRunning = false
 
-const state = ref<TransportState>(TransportState.Disconnected)
-const deviceInfo = ref<TransportDeviceInfo | null>(null)
+const state = ref<SerialState>(SerialState.Disconnected)
+const deviceInfo = ref<DeviceInfo | null>(null)
 const logLines = ref<string[]>([])
 const logEnabled = ref(false)
 const baudrate = ref(0)
@@ -26,18 +19,17 @@ const parser = new FrameParser()
 
 let reader: ReadableStreamDefaultReader | null = null
 
-/** USB transport implementation using Web Serial API */
-export function useUsbTransport(): HIDTransport {
-  const isConnected = computed(() => state.value === TransportState.Connected)
+export function useSerial() {
+  const isConnected = computed(() => state.value === SerialState.Connected)
 
   async function connect(): Promise<boolean> {
-    if (state.value !== TransportState.Disconnected) return false
+    if (state.value !== SerialState.Disconnected) return false
     if (!('serial' in navigator)) {
       log('WebSerial API not available')
       return false
     }
 
-    state.value = TransportState.Connecting
+    state.value = SerialState.Opening
     log('Requesting serial port...')
 
     try {
@@ -53,21 +45,28 @@ export function useUsbTransport(): HIDTransport {
 
       if (!serialPort.value) {
         log('No port selected')
-        state.value = TransportState.Disconnected
+        state.value = SerialState.Disconnected
         return false
       }
 
       const info = serialPort.value.getInfo()
       log(`USB Product ID: 0x${info.usbProductId?.toString(16) ?? 'unknown'}`)
 
-      let baud = baudrate.value > 0 ? baudrate.value : USB.MINIKVM_BAUDRATE
+      let baud: number
+      // Use existing baudrate if already set (for baudrate switching), otherwise default to 115200
+      if (baudrate.value > 0) {
+        baud = baudrate.value
+      } else {
+        baud = USB.MINIKVM_BAUDRATE
+      }
+
       await serialPort.value.open({ baudRate: baud })
       log(`Connected at ${baud} baud`)
       baudrate.value = baud
 
       writer = serialPort.value.writable!.getWriter()
 
-      state.value = TransportState.Connected
+      state.value = SerialState.Connected
       startReadLoop()
 
       await writeQuery(Command.CMD_GET_INFO)
@@ -75,28 +74,41 @@ export function useUsbTransport(): HIDTransport {
       return true
     } catch (err) {
       log(`Connection error: ${err}`)
-      state.value = TransportState.Error
+      state.value = SerialState.Disconnected
       serialPort.value = null
       return false
     }
   }
 
   async function disconnect(): Promise<void> {
-    state.value = TransportState.Disconnected
+    state.value = SerialState.Disconnected
     readLoopRunning = false
 
+    // Cancel the reader to unblock any pending read() call
     if (reader) {
-      try { await reader.cancel() } catch { /* ignore */ }
+      try {
+        await reader.cancel()
+      } catch {
+        /* ignore */
+      }
       reader = null
     }
 
     if (writer) {
-      try { await writer.releaseLock() } catch { /* ignore */ }
+      try {
+        await writer.releaseLock()
+      } catch {
+        /* ignore */
+      }
       writer = null
     }
 
     if (serialPort.value) {
-      try { await serialPort.value.close() } catch { /* ignore */ }
+      try {
+        await serialPort.value.close()
+      } catch {
+        /* ignore */
+      }
       serialPort.value = null
     }
 
@@ -105,8 +117,17 @@ export function useUsbTransport(): HIDTransport {
     log('Disconnected')
   }
 
+  async function setBaudrate(newBaud: number): Promise<boolean> {
+    await disconnect()
+    baudrate.value = newBaud
+    // Wait for port to fully close
+    await new Promise(r => setTimeout(r, 200))
+    // Reconnect at new baudrate — connect() will use baudrate.value if set
+    return connect()
+  }
+
   async function write(data: Uint8Array): Promise<void> {
-    if (!writer || state.value !== TransportState.Connected) {
+    if (!writer || state.value !== SerialState.Connected) {
       log(`Cannot write: state=${state.value}, writer=${!!writer}`)
       return
     }
@@ -119,7 +140,7 @@ export function useUsbTransport(): HIDTransport {
   }
 
   async function writeQuery(cmd: number): Promise<void> {
-    if (state.value !== TransportState.Connected) return
+    if (state.value !== SerialState.Connected) return
     const frame = new Uint8Array(6)
     frame[0] = 0x57
     frame[1] = 0xab
@@ -130,13 +151,10 @@ export function useUsbTransport(): HIDTransport {
     await write(frame)
   }
 
-  async function queryDeviceInfo(): Promise<void> {
-    await writeQuery(Command.CMD_GET_INFO)
-  }
-
   function startReadLoop(): void {
     if (!serialPort.value?.readable) return
     readLoopRunning = true
+
     reader = serialPort.value.readable.getReader()
 
     async function loop(): Promise<void> {
@@ -152,11 +170,18 @@ export function useUsbTransport(): HIDTransport {
           }
         }
       } catch (err) {
-        if (readLoopRunning) log(`Read error: ${err}`)
+        if (readLoopRunning) {
+          log(`Read error: ${err}`)
+        }
       } finally {
-        try { reader!.releaseLock() } catch { /* ignore */ }
+        try {
+          reader!.releaseLock()
+        } catch {
+          /* ignore */
+        }
       }
     }
+
     loop()
   }
 
@@ -164,19 +189,30 @@ export function useUsbTransport(): HIDTransport {
     log(`RX: ${hexDump(frame)}`)
 
     const cmd = frame[3]
+
+    // CMD_GET_INFO response = 0x81
     if (cmd === 0x81 && frame.length >= 9) {
       const version = frame[5].toString(16)
       const targetConnected = frame[6] === 1
       const lockByte = frame[7]
+      const scrollLock = (lockByte & 0x01) !== 0
+      const capsLock = (lockByte & 0x02) !== 0
+      const numLock = (lockByte & 0x04) !== 0
+
       deviceInfo.value = {
         firmwareVersion: `1.${version}`,
         targetConnected,
-        numLock: (lockByte & 0x04) !== 0,
-        capsLock: (lockByte & 0x02) !== 0,
-        scrollLock: (lockByte & 0x01) !== 0,
+        numLock,
+        capsLock,
+        scrollLock,
       }
-      log(`Device: CH9329 v1.${version} | Target: ${targetConnected ? 'connected' : 'disconnected'}`)
+
+      log(`Device: CH9329 v1.${version} | Target: ${targetConnected ? 'connected' : 'disconnected'} | NL:${numLock} CL:${capsLock} SL:${scrollLock}`)
     }
+  }
+
+  async function queryDeviceInfo(): Promise<void> {
+    await writeQuery(Command.CMD_GET_INFO)
   }
 
   function computeChecksum(data: Uint8Array): number {
@@ -186,7 +222,9 @@ export function useUsbTransport(): HIDTransport {
   }
 
   function log(msg: string): void {
-    if (logEnabled.value) console.log(`[Serial] ${msg}`)
+    if (logEnabled.value) {
+      console.log(`[Serial] ${msg}`)
+    }
     logLines.value.push(`[${new Date().toLocaleTimeString()}] ${msg}`)
     if (logLines.value.length > 200) logLines.value.shift()
   }
@@ -194,13 +232,15 @@ export function useUsbTransport(): HIDTransport {
   return {
     state,
     deviceInfo,
+    logLines,
+    logEnabled,
+    baudrate,
     isConnected,
     connect,
     disconnect,
     write,
+    writeQuery,
+    setBaudrate,
     queryDeviceInfo,
   }
 }
-
-// Exports for external access
-export { serialPort, logLines, logEnabled, baudrate }
