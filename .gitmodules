@@ -1,5 +1,5 @@
-[submodule "submodules/Openterface_Core"]
-	path = submodules/Openterface_Core
+[submodule "Openterface_Core"]
+	path = Openterface_Core
 	url = https://github.com/TechxArtisanStudio/Openterface_Core.git
 [submodule "submodules/Openterface_WebUI"]
 	path = submodules/Openterface_WebUI
