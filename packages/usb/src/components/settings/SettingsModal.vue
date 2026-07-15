@@ -4,6 +4,7 @@ import { useViewerMedia, CAMERA_RESOLUTIONS } from '../../composables/useViewerM
 import { useSerial } from '../../composables/useSerial'
 import { useInputSettings } from '../../composables/useInputSettings'
 import { useVideoOverlaySettings } from '../../composables/useVideoOverlaySettings'
+import { useUISettings } from '../../composables/useUISettings'
 
 const emit = defineEmits<{ close: [] }>()
 
@@ -15,6 +16,7 @@ const media = useViewerMedia()
 const serial = useSerial()
 const { mouseMode, setMouseMode } = useInputSettings()
 const overlaySettings = useVideoOverlaySettings()
+const uiSettings = useUISettings()
 
 async function applyResolution(res: typeof CAMERA_RESOLUTIONS[number]): Promise<void> {
   await media.applySettings({ width: res.width, height: res.height })
@@ -123,6 +125,19 @@ function resetOverlaySettings(): void {
             <span class="text-sm font-medium text-slate-300">Serial Console Logging</span>
           </label>
           <p class="text-xs text-slate-500 mt-1">Print serial protocol frames to browser console</p>
+        </div>
+
+        <!-- UI Settings -->
+        <div class="pt-4 border-t border-slate-800">
+          <label class="flex items-center gap-2">
+            <input
+              v-model="uiSettings.showKeyDisplay.value"
+              type="checkbox"
+              class="rounded border-slate-700 bg-slate-800 text-orange-500 w-4 h-4"
+            />
+            <span class="text-sm font-medium text-slate-300">Show Key Display</span>
+          </label>
+          <p class="text-xs text-slate-500 mt-1">Show current key press indicator in the top-right corner</p>
         </div>
 
         <!-- Video Overlay Settings -->

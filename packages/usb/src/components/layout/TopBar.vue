@@ -3,12 +3,15 @@ import { ref, computed, inject } from 'vue'
 import { useSerial } from '../../composables/useSerial'
 import { useViewerMedia } from '../../composables/useViewerMedia'
 import { useBrowserDetection } from '../../composables/useBrowserDetection'
+import { useUISettings } from '../../composables/useUISettings'
 import CameraSelector from '../video/CameraSelector.vue'
+import KeyDisplay from './KeyDisplay.vue'
 import type { Ref } from 'vue'
 
 const { state, connect, disconnect, isConnected, generation, usbProductId, usbModeBackend, requestUsbModeHidPermission } = useSerial()
 const media = useViewerMedia()
 const detection = useBrowserDetection()
+const uiSettings = useUISettings()
 const videoElRef = inject<Ref<HTMLVideoElement | null>>('videoEl')
 
 async function toggleMonitor() {
@@ -102,6 +105,9 @@ const showHidUsbModePrompt = computed(() => {
 
     <!-- Spacer -->
     <div class="flex-1" />
+
+    <!-- Key display (top right) -->
+    <KeyDisplay v-if="uiSettings.showKeyDisplay.value" />
 
     <!-- Browser warning -->
     <button
