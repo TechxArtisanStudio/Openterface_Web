@@ -13,7 +13,7 @@ const activeModifiers = {
 export function useViewerKeyboard() {
   const enabled = ref(false)
   const { isConnected, queryDeviceInfo } = useSerial()
-  const { sendKeyPress, sendKeyUp } = useSerialCommands()
+  const { sendKeyPress, sendKeyDown, sendKeyUp } = useSerialCommands()
   const { toggleLockKeyFromKeyboard } = useLockState()
 
   const keyDownHandler = (e: KeyboardEvent) => handleEvent(e, true)
@@ -60,8 +60,18 @@ export function useViewerKeyboard() {
     // Update modifier tracking
     trackModifier(code, pressed)
 
-    // Only handle non-modifier keys; modifiers update the modifier byte for the next key tap
-    if (hidCode >= 0xe0) return
+    // Modifier keys (0xe0-0xe7): send a modifier-only report so the target
+    // device sees the modifier press/release independently of other keys.
+    if (hidCode >= 0xe0) {
+      const modifiers = computeModifiers()
+      console.log('[Keyboard] modifier', pressed ? 'DOWN' : 'UP', 'modifiers:', modifiers.toString(16), 'code:', code)
+      if (pressed) {
+        void sendKeyDown(modifiers, [])
+      } else {
+        void sendKeyUp()
+      }
+      return
+    }
 
     // Lock keys need a device info re-query to get the updated lock state
     const isLockKey = hidCode === 0x39 || hidCode === 0x53 || hidCode === 0x47 // Caps, Num, Scroll
