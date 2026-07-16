@@ -36,7 +36,7 @@ jobs:
           version: '3.1.64'
 
       - name: Build WASM
-        run: bash wasm-build/build.sh Openterface_Core public
+        run: bash wasm-build/build.sh Openterface_Core packages/core/wasm
 
       - name: Install dependencies
         run: npm ci

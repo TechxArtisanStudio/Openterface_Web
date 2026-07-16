@@ -1,6 +1,6 @@
 [submodule "Openterface_Core"]
 	path = Openterface_Core
-	url = https://github.com/TechxArtisanStudio/Openterface_Core.git
+	url = https://github.com/TSTC123/Openterface_Core.git
 [submodule "submodules/Openterface_WebUI"]
 	path = submodules/Openterface_WebUI
 	url = https://github.com/TechxArtisanStudio/Openterface_WebUI.git
