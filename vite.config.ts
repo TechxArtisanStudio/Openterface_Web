@@ -7,7 +7,7 @@ const useHttps = fs.existsSync('./server.key') && fs.existsSync('./server.crt')
 
 export default defineConfig({
   plugins: [vue()],
-  base: '/Openterface_Web/',
+  base: '/',
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
