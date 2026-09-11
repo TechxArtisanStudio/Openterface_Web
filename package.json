@@ -3,11 +3,21 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "submodules/Openterface_WebUI/packages/webrtc"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "typecheck": "vue-tsc --noEmit --skipLibCheck",
-    "preview": "vite preview"
+    "dev:usb": "npm -w @openterface/usb run dev",
+    "dev:webrtc": "npm -w @openterface/webrtc run dev",
+    "build": "npm run build:wasm && npm run build:usb && npm run build:webrtc:android && npm run build:combine",
+    "build:wasm": "bash wasm-build/build.sh Openterface_Core packages/core/wasm",
+    "build:usb": "npm -w @openterface/usb run build",
+    "build:webrtc:android": "npm -w @openterface/webrtc run build",
+    "build:combine": "rm -rf dist && mkdir -p dist && cp -r packages/usb/dist/* dist/ && mkdir -p dist/webrtc-android && cp -r submodules/Openterface_WebUI/packages/webrtc/dist/webrtc-android/* dist/webrtc-android/",
+    "preview:usb": "npm -w @openterface/usb run preview",
+    "preview:webrtc": "npm -w @openterface/webrtc run preview",
+    "typecheck": "npm run typecheck -ws"
   },
   "dependencies": {
     "vue": "^3.5.13"
